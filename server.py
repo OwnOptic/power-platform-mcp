@@ -975,6 +975,22 @@ def create_flow(display_name: str, definition: dict, start: bool = True) -> Flow
     https://learn.microsoft.com/connectors/<connector>/ (large, so search first).
     That page marks deprecated operations. Where a parameter is typed `dynamic` it
     stops at the top-level key - copy the nested shape from get_flow on a working flow.
+
+    Shapes measured on real runs (2026-11-12), so no lookup is needed for these:
+    - Teams chat from the Flow bot: operationId PostMessageToConversation, parameters
+      {"poster": "Flow bot", "location": "Chat with Flow bot", "body/recipient": "<email>",
+      "body/messageBody": "<html>"}. Learn shows this body only as a dynamic schema.
+    - Outlook event: V4CalendarPostItem with "table": "Calendar", "item/subject",
+      "item/start" / "item/end" ("yyyy-MM-ddTHH:mm:ss", local to the zone),
+      "item/requiredAttendees" ("a;b"), "item/body". "item/timeZone" must be the display
+      label, e.g. "(UTC+01:00) Brussels, Copenhagen, Madrid, Paris" (a Windows id like
+      "Romance Standard Time" fails validation); "item/isHtml" does not exist and is rejected.
+    - SharePoint re-read: GetItem {"dataset", "table": <list id>, "id"}; person columns read
+      as body('X')?['Manager']?['Email'], choice columns as ?['Col']?['Value'].
+    - Wait (type "Wait"): inputs.until.timestamp must be UTC round-trip format. For a local
+      hour use convertToUtc(concat(<yyyy-MM-dd>, 'T09:00:00'), 'Romance Standard Time').
+    The save itself validates parameter names: WorkflowOperationParametersExtraParameter or
+    OpenApiOperationParameterValidationFailed names the offending key.
     """
     notes = _normalise_definition(definition)
     warnings = _raise_on_errors(_validate_definition(definition)) + notes
